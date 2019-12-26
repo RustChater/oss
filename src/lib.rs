@@ -29,6 +29,11 @@ pub struct OSSClient<'a> {
 }
 
 impl<'a> OSSClient<'a> {
+
+    /// New OSSClient
+    /// 
+    /// Use access_key_id and access_key_secret to create a OSSClient
+    /// Consider support STS!
     pub fn new(endpoint: &'a str, access_key_id: &'a str, access_key_secret: &'a str) -> OSSClient<'a> {
         OSSClient {
             endpoint: endpoint,
