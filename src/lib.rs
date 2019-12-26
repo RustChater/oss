@@ -15,6 +15,13 @@ use reqwest::{
 };
 use rust_util::*;
 
+/// iff!(condition, result_when_true, result_when_false)
+macro_rules! iff {
+    ($c:expr, $t:expr, $f:expr) => {
+        if $c { $t } else { $f }
+    };
+}
+
 pub const OSS_VERB_GET: &str = "GET";
 pub const OSS_VERB_PUT: &str = "PUT";
 pub const OSS_VERB_DELETE: &str = "DELETE";
@@ -83,7 +90,7 @@ impl<'a> OSSClient<'a> {
 
     pub fn generate_signed_url(&self, verb: &str, bucket_name: &str, key: &str, expire_in_seconds: u64, is_https: bool) -> String {
         let mut signed_url = String::with_capacity(1024);
-        signed_url.push_str(if is_https { "https://" } else { "http://" });
+        signed_url.push_str(iff!(is_https, "https://", "http://"));
         signed_url.push_str(&format!("{}.{}/{}", bucket_name, self.endpoint, key));
     
         let current_secs = get_current_secs();
