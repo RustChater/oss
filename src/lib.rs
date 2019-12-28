@@ -1,6 +1,5 @@
 use std::{
     fs::File,
-    time::SystemTime,
 };
 use crypto::{
     mac::{
@@ -13,14 +12,12 @@ use crypto::{
 use reqwest::{
     Response,
 };
-use rust_util::*;
-
-/// iff!(condition, result_when_true, result_when_false)
-macro_rules! iff {
-    ($c:expr, $t:expr, $f:expr) => {
-        if $c { $t } else { $f }
-    };
-}
+use rust_util::{
+    iff,
+    XResult,
+    new_box_ioerror,
+    util_time::get_current_secs,
+};
 
 pub const OSS_VERB_GET: &str = "GET";
 pub const OSS_VERB_PUT: &str = "PUT";
@@ -133,8 +130,4 @@ fn calc_hmac_sha1(key: &[u8], message: &[u8]) -> MacResult {
     let mut hmac = Hmac::new(Sha1::new(), key);
     hmac.input(message);
     hmac.result()
-}
-
-fn get_current_secs() -> u64 {
-    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()
 }
