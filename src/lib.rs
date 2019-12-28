@@ -26,12 +26,17 @@ pub const OSS_VERB_DELETE: &str = "DELETE";
 /// OSSClient - Alibaba Cloud OSS Client
 /// 
 /// Reference URL: https://help.aliyun.com/document_detail/31952.html
+/// 
+/// ```rust
+/// let oss_client = OSSClient::new("AK", "SK");
+/// ```
 pub struct OSSClient<'a> {
     pub endpoint: &'a str,
     pub access_key_id: &'a str,
     pub access_key_secret: &'a str,
 }
 
+/// OSS Client implemention
 impl<'a> OSSClient<'a> {
 
     /// New OSSClient
