@@ -1,6 +1,6 @@
 [package]
 name = "oss"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Hatter Jiang <jht5945@gmail.com>"]
 edition = "2018"
 description = "Simple Alibaba Cloud OSS Client in Rust"

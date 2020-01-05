@@ -72,10 +72,28 @@ impl<'a> OSSClient<'a> {
         }
     }
 
+    pub fn get_file_content_bytes(&self, bucket_name: &str, key: &str) -> XResult<Option<Vec<u8>>> {
+        let get_url = self.generate_signed_get_url(bucket_name, key, 30_u64);
+        let mut response = reqwest::get(&get_url)?;
+        match response.status().as_u16() {
+            404_u16 => Ok(None),
+            200_u16 => {
+                let mut buf: Vec<u8> = vec![];
+                response.copy_to(&mut buf)?;
+                Ok(Some(buf))
+            },
+            _ => Err(new_box_ioerror(&format!("Error in read: {}/{}, returns: {:?}", bucket_name, key, response))),
+        }
+    }
+
     pub fn put_file_content(&self, bucket_name: &str, key: &str, content: &str) -> XResult<Response> {
+        self.put_file_content_bytes(bucket_name, key, content.as_bytes().to_vec())
+    }
+
+    pub fn put_file_content_bytes(&self, bucket_name: &str, key: &str, content_bytes: Vec<u8>) -> XResult<Response> {
         let put_url = self.generate_signed_put_url(bucket_name, key, 30_u64);
         let client = reqwest::Client::new();
-        Ok(client.put(&put_url).body(content.as_bytes().to_vec()).send()?)
+        Ok(client.put(&put_url).body(content_bytes).send()?)
     }
 
     pub fn generate_signed_put_url(&self, bucket_name: &str, key: &str, expire_in_seconds: u64) -> String {
