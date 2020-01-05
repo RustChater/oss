@@ -1,5 +1,14 @@
 use std::{
-    fs::File,
+    fs::{
+        self,
+        File,
+    },
+    env,
+    path::PathBuf,
+    io::{
+        Error,
+        ErrorKind,
+    },
 };
 use crypto::{
     mac::{
@@ -45,10 +54,49 @@ impl<'a> OSSClient<'a> {
     /// Consider support STS!
     pub fn new(endpoint: &'a str, access_key_id: &'a str, access_key_secret: &'a str) -> OSSClient<'a> {
         OSSClient {
-            endpoint: endpoint,
-            access_key_id: access_key_id,
-            access_key_secret: access_key_secret,
+            endpoint,
+            access_key_id,
+            access_key_secret,
         }
+    }
+
+    /// New OSSClient from JSON file
+    pub fn from_file(f: &str) -> XResult<Self> {
+        let f_path_buf = if f.starts_with("~/") {
+            let home = PathBuf::from(env::var("HOME")?);
+            home.join(f.chars().skip(2).collect::<String>())
+        } else {
+            PathBuf::from(f)
+        };
+        let f_content = fs::read_to_string(f_path_buf)?;
+        Self::from_json(&f_content)
+    }
+
+    /// New OSSClient from JSON
+    /// 
+    /// JSON sample:
+    /// ```json
+    /// {
+    ///     "endpoint": "",
+    ///     "accessKeyId": "",
+    ///     "accessKeySecret": ""
+    /// }
+    /// ```
+    pub fn from_json(json: &str) -> XResult<Self> {
+        let json_value = json::parse(json)?;
+        if !json_value.is_object() {
+            return Err(Box::new(Error::new(ErrorKind::Other, format!("JSON format erorr: {}", json))));
+        }
+
+        let endpoint = Self::string_to_a_str(json_value["endpoint"].as_str().unwrap_or_default());
+        let access_key_id = Self::string_to_a_str(json_value["accessKeyId"].as_str().unwrap_or_default());
+        let access_key_secret = Self::string_to_a_str(json_value["accessKeySecret"].as_str().unwrap_or_default());
+
+        if endpoint.is_empty() || access_key_id.is_empty() || access_key_secret.is_empty() {
+            return Err(Box::new(Error::new(ErrorKind::Other,"Endpoint, access_key_id or access_key_secret cannot be empty")));
+        }
+        
+        Ok(Self::new(endpoint, access_key_id, access_key_secret))
     }
 
     pub fn put_file(&self, bucket_name: &str, key: &str, expire_in_seconds: u64, file: File) -> XResult<Response> {
@@ -127,6 +175,11 @@ impl<'a> OSSClient<'a> {
         signed_url.push_str(&urlencoding::encode(signature.as_str()));
     
         signed_url
+    }
+
+    // SAFE? may these codes cause memory leak?
+    fn string_to_a_str(s: &str) -> &'a str {
+        Box::leak(s.to_owned().into_boxed_str())
     }
 }
 
