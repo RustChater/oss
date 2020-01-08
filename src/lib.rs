@@ -1,4 +1,5 @@
 use std::{
+    io::Read,
     fs::{
         self,
         File,
@@ -99,49 +100,52 @@ impl<'a> OSSClient<'a> {
         Ok(Self::new(endpoint, access_key_id, access_key_secret))
     }
 
-    pub fn put_file(&self, bucket_name: &str, key: &str, expire_in_seconds: u64, file: File) -> XResult<Response> {
+    /// Put file will read full file content to memory and send with HTTP protocol
+    pub async fn put_file(&self, bucket_name: &str, key: &str, expire_in_seconds: u64, file: File) -> XResult<Response> {
+        let put_url = self.generate_signed_put_url(bucket_name, key, expire_in_seconds);
         let client = reqwest::Client::new();
-        Ok(client.put(&self.generate_signed_put_url(bucket_name, key, expire_in_seconds)).body(file).send()?)
+        let mut v = Vec::new();
+        let mut file = file;
+        file.read_to_end(&mut v)?;
+        Ok(client.put(&put_url).body(v).send().await?)
     }
 
-    pub fn delete_file(&self, bucket_name: &str, key: &str) -> XResult<Response> {
+    pub async fn delete_file(&self, bucket_name: &str, key: &str) -> XResult<Response> {
         let delete_url = self.generate_signed_delete_url(bucket_name, key, 30_u64);
         let client = reqwest::Client::new();
-        Ok(client.delete(&delete_url).send()?)
+        Ok(client.delete(&delete_url).send().await?)
     }
 
-    pub fn get_file_content(&self, bucket_name: &str, key: &str) -> XResult<Option<String>> {
+    pub async fn get_file_content(&self, bucket_name: &str, key: &str) -> XResult<Option<String>> {
         let get_url = self.generate_signed_get_url(bucket_name, key, 30_u64);
-        let mut response = reqwest::get(&get_url)?;
+        let response = reqwest::get(&get_url).await?;
         match response.status().as_u16() {
             404_u16 => Ok(None),
-            200_u16 => Ok(Some(response.text()?)),
+            200_u16 => Ok(Some(response.text().await?)),
             _ => Err(new_box_ioerror(&format!("Error in read: {}/{}, returns: {:?}", bucket_name, key, response))),
         }
     }
 
-    pub fn get_file_content_bytes(&self, bucket_name: &str, key: &str) -> XResult<Option<Vec<u8>>> {
+    pub async fn get_file_content_bytes(&self, bucket_name: &str, key: &str) -> XResult<Option<Vec<u8>>> {
         let get_url = self.generate_signed_get_url(bucket_name, key, 30_u64);
-        let mut response = reqwest::get(&get_url)?;
+        let response = reqwest::get(&get_url).await?;
         match response.status().as_u16() {
             404_u16 => Ok(None),
             200_u16 => {
-                let mut buf: Vec<u8> = vec![];
-                response.copy_to(&mut buf)?;
-                Ok(Some(buf))
+                Ok(Some(response.bytes().await?.as_ref().to_vec()))
             },
-            _ => Err(new_box_ioerror(&format!("Error in read: {}/{}, returns: {:?}", bucket_name, key, response))),
+            _ => Err(new_box_ioerror(&format!("Error in read: {}/{}, returns: {:?}", bucket_name, key, response)) as Box<dyn std::error::Error>),
         }
     }
 
-    pub fn put_file_content(&self, bucket_name: &str, key: &str, content: &str) -> XResult<Response> {
-        self.put_file_content_bytes(bucket_name, key, content.as_bytes().to_vec())
+    pub async fn put_file_content(&self, bucket_name: &str, key: &str, content: &str) -> XResult<Response> {
+        self.put_file_content_bytes(bucket_name, key, content.as_bytes().to_vec()).await
     }
 
-    pub fn put_file_content_bytes(&self, bucket_name: &str, key: &str, content_bytes: Vec<u8>) -> XResult<Response> {
+    pub async fn put_file_content_bytes(&self, bucket_name: &str, key: &str, content_bytes: Vec<u8>) -> XResult<Response> {
         let put_url = self.generate_signed_put_url(bucket_name, key, 30_u64);
         let client = reqwest::Client::new();
-        Ok(client.put(&put_url).body(content_bytes).send()?)
+        Ok(client.put(&put_url).body(content_bytes).send().await?)
     }
 
     pub fn generate_signed_put_url(&self, bucket_name: &str, key: &str, expire_in_seconds: u64) -> String {

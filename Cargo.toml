@@ -1,6 +1,6 @@
 [package]
 name = "oss"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Hatter Jiang <jht5945@gmail.com>"]
 edition = "2018"
 description = "Simple Alibaba Cloud OSS Client in Rust"
@@ -15,6 +15,6 @@ repository = "https://git.hatter.ink/hatter/simple-oss"
 rust-crypto = "0.2.36"
 urlencoding = "1.0.0"
 base64 = "0.11.0"
-reqwest = "0.9.22"
+reqwest = "0.10.0"
 rust_util="0.2.0"
-json = "0.11.14"
+json = "0.12.0"
