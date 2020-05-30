@@ -1,27 +1,16 @@
 use std::{
     io::Read,
-    fs::{
-        self,
-        File,
-    },
+    fs::{ self, File, },
     env,
     path::PathBuf,
-    io::{
-        Error,
-        ErrorKind,
-    },
+    io::{ Error, ErrorKind, },
 };
 use crypto::{
-    mac::{
-        Mac,
-        MacResult,
-    },
+    mac::{ Mac, MacResult, },
     hmac::Hmac,
     sha1::Sha1,
 };
-use reqwest::{
-    Response,
-};
+use reqwest::Response;
 use rust_util::{
     iff,
     XResult,
@@ -40,24 +29,25 @@ pub const OSS_VERB_DELETE: &str = "DELETE";
 /// ```rust
 /// let oss_client = OSSClient::new("AK", "SK");
 /// ```
-pub struct OSSClient<'a> {
-    pub endpoint: &'a str,
-    pub access_key_id: &'a str,
-    pub access_key_secret: &'a str,
+#[derive(Clone, Debug)]
+pub struct OSSClient {
+    endpoint: String,
+    access_key_id: String,
+    access_key_secret: String,
 }
 
 /// OSS Client implemention
-impl<'a> OSSClient<'a> {
+impl OSSClient {
 
     /// New OSSClient
     /// 
     /// Use access_key_id and access_key_secret to create a OSSClient
     /// Consider support STS!
-    pub fn new(endpoint: &'a str, access_key_id: &'a str, access_key_secret: &'a str) -> OSSClient<'a> {
+    pub fn new(endpoint: &str, access_key_id: &str, access_key_secret: &str) -> OSSClient {
         OSSClient {
-            endpoint,
-            access_key_id,
-            access_key_secret,
+            endpoint: endpoint.into(),
+            access_key_id: access_key_id.into(),
+            access_key_secret: access_key_secret.into(),
         }
     }
 
@@ -89,14 +79,14 @@ impl<'a> OSSClient<'a> {
             return Err(Box::new(Error::new(ErrorKind::Other, format!("JSON format erorr: {}", json))));
         }
 
-        let endpoint = Self::string_to_a_str(json_value["endpoint"].as_str().unwrap_or_default());
-        let access_key_id = Self::string_to_a_str(json_value["accessKeyId"].as_str().unwrap_or_default());
-        let access_key_secret = Self::string_to_a_str(json_value["accessKeySecret"].as_str().unwrap_or_default());
+        let endpoint = json_value["endpoint"].as_str().unwrap_or_default();
+        let access_key_id = json_value["accessKeyId"].as_str().unwrap_or_default();
+        let access_key_secret = json_value["accessKeySecret"].as_str().unwrap_or_default();
 
         if endpoint.is_empty() || access_key_id.is_empty() || access_key_secret.is_empty() {
             return Err(Box::new(Error::new(ErrorKind::Other,"Endpoint, access_key_id or access_key_secret cannot be empty")));
         }
-        
+
         Ok(Self::new(endpoint, access_key_id, access_key_secret))
     }
 
@@ -171,7 +161,7 @@ impl<'a> OSSClient<'a> {
         signed_url.push_str("?Expires=");
         signed_url.push_str(expire_secs.to_string().as_str());
         signed_url.push_str("&OSSAccessKeyId=");
-        signed_url.push_str(&urlencoding::encode(self.access_key_id));
+        signed_url.push_str(&urlencoding::encode(&self.access_key_id));
         signed_url.push_str("&Signature=");
     
         let to_be_signed = get_to_be_signed(verb, expire_secs, bucket_name, key);
@@ -179,11 +169,6 @@ impl<'a> OSSClient<'a> {
         signed_url.push_str(&urlencoding::encode(signature.as_str()));
     
         signed_url
-    }
-
-    // SAFE? may these codes cause memory leak?
-    fn string_to_a_str(s: &str) -> &'a str {
-        Box::leak(s.to_owned().into_boxed_str())
     }
 }
 

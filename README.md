@@ -11,6 +11,8 @@ oss_cleint.put_file_content("<bucket>", "helloworld.txt", "hello world!").await?
 
 #### Changelog
 
+* v0.3.0
+    * Do not use `'a` lifecycle
 * v0.2.0
     * Use `async/await` by `reqwest v0.10.0`
 
