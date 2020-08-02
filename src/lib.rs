@@ -1,22 +1,20 @@
+#[macro_use]
+extern crate rust_util;
+
 use std::{
     io::Read,
-    fs::{ self, File, },
+    fs::{ self, File },
     env,
     path::PathBuf,
-    io::{ Error, ErrorKind, },
+    io::{ Error, ErrorKind },
 };
 use crypto::{
-    mac::{ Mac, MacResult, },
+    mac::{ Mac, MacResult },
     hmac::Hmac,
     sha1::Sha1,
 };
 use reqwest::Response;
-use rust_util::{
-    iff,
-    XResult,
-    new_box_ioerror,
-    util_time::get_current_secs,
-};
+use rust_util::{ XResult, new_box_ioerror, util_time::get_current_secs };
 
 pub const OSS_VERB_GET: &str = "GET";
 pub const OSS_VERB_PUT: &str = "PUT";
@@ -94,7 +92,7 @@ impl OSSClient {
     pub async fn put_file(&self, bucket_name: &str, key: &str, expire_in_seconds: u64, file: File) -> XResult<Response> {
         let put_url = self.generate_signed_put_url(bucket_name, key, expire_in_seconds);
         let client = reqwest::Client::new();
-        let mut v = Vec::new();
+        let mut v = vec![];
         let mut file = file;
         file.read_to_end(&mut v)?;
         Ok(client.put(&put_url).body(v).send().await?)
@@ -121,9 +119,7 @@ impl OSSClient {
         let response = reqwest::get(&get_url).await?;
         match response.status().as_u16() {
             404_u16 => Ok(None),
-            200_u16 => {
-                Ok(Some(response.bytes().await?.as_ref().to_vec()))
-            },
+            200_u16 => Ok(Some(response.bytes().await?.as_ref().to_vec())),
             _ => Err(new_box_ioerror(&format!("Error in read: {}/{}, returns: {:?}", bucket_name, key, response)) as Box<dyn std::error::Error>),
         }
     }
