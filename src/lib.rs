@@ -91,7 +91,8 @@ impl OSSClient {
     /// Put file will read full file content to memory and send with HTTP protocol
     pub async fn put_file(&self, bucket_name: &str, key: &str, expire_in_seconds: u64, file: File) -> XResult<Response> {
         let put_url = self.generate_signed_put_url(bucket_name, key, expire_in_seconds);
-        let client = reqwest::Client::new();
+        // let client = reqwest::Client::new();
+        let client= reqwest::ClientBuilder::new().danger_accept_invalid_certs(true).build().unwrap();
         let mut v = vec![];
         let mut file = file;
         file.read_to_end(&mut v)?;
@@ -100,7 +101,8 @@ impl OSSClient {
 
     pub async fn delete_file(&self, bucket_name: &str, key: &str) -> XResult<Response> {
         let delete_url = self.generate_signed_delete_url(bucket_name, key, 30_u64);
-        let client = reqwest::Client::new();
+        // let client = reqwest::Client::new();
+        let client= reqwest::ClientBuilder::new().danger_accept_invalid_certs(true).build().unwrap();
         Ok(client.delete(&delete_url).send().await?)
     }
 
@@ -130,7 +132,9 @@ impl OSSClient {
 
     pub async fn put_file_content_bytes(&self, bucket_name: &str, key: &str, content_bytes: Vec<u8>) -> XResult<Response> {
         let put_url = self.generate_signed_put_url(bucket_name, key, 30_u64);
-        let client = reqwest::Client::new();
+        //let client = reqwest::Client::new();
+        let client= reqwest::ClientBuilder::new().danger_accept_invalid_certs(true).build().unwrap();
+
         Ok(client.put(&put_url).body(content_bytes).send().await?)
     }
 
